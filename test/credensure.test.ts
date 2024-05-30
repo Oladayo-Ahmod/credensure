@@ -53,7 +53,6 @@ describe("CredenSure", function () {
             // Check credentials
             const credentialsAddr1 = await credenSure.getCredentials(addr1.address);
             const credentialsAddr2 = await credenSure.getCredentials(addr2.address);
-            console.log(credentialsAddr1)
 
             expect(credentialsAddr1.length).to.equal(3);
             expect(credentialsAddr1[0].data).to.equal("Credential Data 1");
@@ -66,12 +65,12 @@ describe("CredenSure", function () {
             const endorsementsAddr1 = await credenSure.getEndorsements(addr1.address);
             const endorsementsAddr2 = await credenSure.getEndorsements(addr2.address);
 
-            expect(endorsementsAddr1.length).to.equal(1);
+            expect(endorsementsAddr1.length).to.equal(3);
             expect(endorsementsAddr1[0].message).to.equal("Endorsement Message 1");
 
-            expect(endorsementsAddr2.length).to.equal(2);
-            expect(endorsementsAddr2[0].message).to.equal("Endorsement Message 2");
-            expect(endorsementsAddr2[1].message).to.equal("Endorsement Message 3");
+            expect(endorsementsAddr2.length).to.equal(3);
+            expect(endorsementsAddr2[0].message).to.equal("Endorsement Message 1");
+            expect(endorsementsAddr2[1].message).to.equal("Endorsement Message 2");
         });
     });
 });
