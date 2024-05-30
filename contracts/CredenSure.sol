@@ -10,6 +10,7 @@ contract CredenSure {
 
     struct Endorsement {
         address endorser;
+        
         string message;
         uint256 endorsedAt;
     }
