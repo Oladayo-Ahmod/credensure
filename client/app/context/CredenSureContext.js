@@ -1,10 +1,17 @@
+"use client"
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { Provider, Wallet } from 'zksync-ethers';
+import { BrowserProvider, Provider, Wallet,Contract } from 'zksync-ethers';
 import { ABI, ADDRESS}  from '../constants/index'
 
 const CredenSureContext = createContext();
-const private_key = process.env.WALLET_PRIVATE_KEY
+const private_key = "d2165511da6ffa6d19970a573367614de1e720125f92d9223c42146e86c6067d"
+
+let connect
+if(typeof window !=='undefined'){
+    connect = window.ethereum
+}
 
 export const CredenSureProvider = ({ children }) => {
     const [wallet, setWallet] = useState(null);
@@ -14,10 +21,10 @@ export const CredenSureProvider = ({ children }) => {
 
     useEffect(() => {
         const init = async () => {
-            const zkProvider = new Provider('https://sepolia.era.zksync.dev');
+            // const provider = new BrowserProvider()
+            const zkProvider = new BrowserProvider(connect);
             const wallet = new Wallet(private_key, zkProvider);
-            console.log(wallet)
-            const contract = new ethers.Contract(ADDRESS, ABI, wallet);
+            const contract = new Contract(ADDRESS, ABI, wallet);
             setZkProvider(zkProvider);
             setWallet(wallet);
             setContract(contract);
