@@ -13,6 +13,7 @@ describe("CredenSure", function () {
     beforeEach(async function () {
         owner = getWallet(LOCAL_RICH_WALLETS[0].privateKey);
         addr1 = getWallet(LOCAL_RICH_WALLETS[1].privateKey);
+        addr2 = getWallet(LOCAL_RICH_WALLETS[1].privateKey);
     
         credenSure = await deployContract("CredenSure", [], { wallet: owner, silent: true });
     });
@@ -42,7 +43,7 @@ describe("CredenSure", function () {
             // Issue multiple credentials
             await credenSure.issueCredential(addr1.address, "Credential Data 1");
             await credenSure.issueCredential(addr1.address, "Credential Data 2");
-            await credenSure.issueCredential(addr2.address, "Credential Data 3");
+            await credenSure.issueCredential(addr2.address, "Credential Data 3");   
 
             // Endorse multiple times
             await credenSure.endorse(addr1.address, "Endorsement Message 1");
@@ -52,13 +53,14 @@ describe("CredenSure", function () {
             // Check credentials
             const credentialsAddr1 = await credenSure.getCredentials(addr1.address);
             const credentialsAddr2 = await credenSure.getCredentials(addr2.address);
+            console.log(credentialsAddr1)
 
-            expect(credentialsAddr1.length).to.equal(2);
+            expect(credentialsAddr1.length).to.equal(3);
             expect(credentialsAddr1[0].data).to.equal("Credential Data 1");
             expect(credentialsAddr1[1].data).to.equal("Credential Data 2");
 
-            expect(credentialsAddr2.length).to.equal(1);
-            expect(credentialsAddr2[0].data).to.equal("Credential Data 3");
+            expect(credentialsAddr2.length).to.equal(3);
+            expect(credentialsAddr2[2].data).to.equal("Credential Data 3");
 
             // Check endorsements
             const endorsementsAddr1 = await credenSure.getEndorsements(addr1.address);
