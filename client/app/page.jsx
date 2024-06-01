@@ -42,7 +42,8 @@ const Home = () => {
     const handleFetchCredentials = async () => {
         try {
             const credentials = await fetchCredentials(user);
-            setCredentials(credentials);
+            console.log(credentials)
+            // setCredentials(credentials);
         } catch (error) {
             console.error(error);
         }
@@ -51,7 +52,8 @@ const Home = () => {
     const handleFetchEndorsements = async () => {
         try {
             const endorsements = await fetchEndorsements(user);
-            setEndorsements(endorsements);
+            console.log(endorsements)
+            // setEndorsements(endorsements);
         } catch (error) {
             console.error(error);
         }
