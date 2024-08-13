@@ -1,10 +1,25 @@
-import { deployContract } from "./utils";
+import { deployContract, getWallet, getProvider } from "./utils";
+import * as ethers from "ethers";
 
-// An example of a basic deploy script
-// It will deploy a Greeter contract to selected network
-// as well as verify it on Block Explorer if possible for the network
 export default async function () {
-  const contractArtifactName = "CredenSure";
-  const constructorArguments = [];
-  await deployContract(contractArtifactName, constructorArguments);
+   await deployContract("CredenSure",[]);
+  const paymaster = await deployContract("CredensurePaymaster");
+
+  const paymasterAddress = await paymaster.getAddress();
+
+  // Supplying paymaster with ETH
+  console.log("Funding paymaster with ETH...");
+  const wallet = getWallet();
+  await (
+    await wallet.sendTransaction({
+      to: paymasterAddress,
+      value: ethers.parseEther("0.08"),
+    })
+  ).wait();
+
+  const provider = getProvider();
+  const paymasterBalance = await provider.getBalance(paymasterAddress);
+  console.log(`Paymaster ETH balance is now ${paymasterBalance.toString()}`);
+
+  console.log(`Done!`);
 }
