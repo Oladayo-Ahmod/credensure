@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { BrowserProvider, Provider, Wallet,Contract,utils,types } from 'zksync-ethers';
-import { ABI, ADDRESS}  from '../constants/index'
+import { ABI, ADDRESS , PAYMASTER_ADDRESS}  from '../constants/index'
 
 const CredenSureContext = createContext();
 const private_key = process.env.PRIVATE_KEY
@@ -19,21 +19,22 @@ export const CredenSureProvider = ({ children }) => {
     const [contract, setContract] = useState(null);
     const [sessionKey, setSessionKey] = useState(null);
 
+     // paymaster params
+     const paymasterParams = utils.getPaymasterParams(PAYMASTER_ADDRESS, {
+        type: "General",
+        innerInput: new Uint8Array(),
+      });
+
     useEffect(() => {
         const init = async () => {
-            // const provider = new BrowserProvider()
+            if(!connect) return
+            const provider = new BrowserProvider(connect)
             const zkProvider = new Provider('https://sepolia.era.zksync.dev');
-            // const wallet = new Wallet(private_key, zkProvider);
 
-            const provider = Provider.getDefaultProvider(types.Network.Sepolia);
-            const ethProvider = ethers.getDefaultProvider("sepolia");
-            const wallet = new Wallet(private_key, provider, ethProvider);
-            const contract = new Contract(ADDRESS, ABI, wallet);
-
-
+            const signer = await provider.getSigner()
+            const contract = new Contract(ADDRESS, ABI, signer);
 
             setZkProvider(zkProvider);
-            setWallet(wallet);
             setContract(contract);
         };
 
@@ -71,25 +72,60 @@ export const CredenSureProvider = ({ children }) => {
 
 
     const issueCredential = async (recipient, data) => {
-        if (contract && sessionKey) {
-            const tx = await contract.issueCredential(recipient, data);
-            await signMetaTxRequest(sessionKey, tx);
-            // console.log(metaTx)
-            // const sentTx = await wallet.sendTransaction(metaTx.signedTx);
-            // await sentTx.wait();
-            // return sentTx.hash;
+        if (contract) {
+            // calculate gas limits
+            const gasLimit = await contract.issueCredential
+                .estimateGas(recipient,data,{
+                customData: {
+                gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+                paymasterParams: paymasterParams,
+                },
+           });
+                         
+            // execute transaction
+            const tx = await contract
+                .issueCredential(recipient,data,{
+                maxPriorityFeePerGas: ethers.toBigInt(0),
+                maxFeePerGas: await zkProvider.getGasPrice(),
+                gasLimit,
+                customData: {
+                gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+                paymasterParams,
+                },
+          });
+
+          await tx.wait()
+
         }
-        throw new Error("Contract or session key not initialized");
     };
 
     const endorse = async (recipient, message) => {
-        if (contract && sessionKey) {
-            const tx = await contract.endorse(recipient, message);
-            await signMetaTxRequest(sessionKey, tx);
+         // calculate gas limits
+        const gasLimit = await contract.endorse
+            .estimateGas(recipient,message,{
+            customData: {
+            gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+            paymasterParams: paymasterParams,
+            },
+        });
+
+            // execute transaction
+            const tx = await contract
+            .endorse(recipient,message,{
+            maxPriorityFeePerGas: ethers.toBigInt(0),
+            maxFeePerGas: await zkProvider.getGasPrice(),
+            gasLimit,
+            customData: {
+            gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+            paymasterParams,
+            },
+        });
+
+        await tx.wait()
+            // await signMetaTxRequest(sessionKey, tx);
             // const sentTx = await zkProvider.sendTransaction(metaTx);
             // await sentTx.wait();
             // return sentTx.hash;
-        }
     };
 
     const fetchCredentials = async (user) => {
