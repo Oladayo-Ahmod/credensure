@@ -6,7 +6,6 @@ import { BrowserProvider, Provider, Wallet,Contract,utils,types } from 'zksync-e
 import { ABI, ADDRESS , PAYMASTER_ADDRESS}  from '../constants/index'
 
 const CredenSureContext = createContext();
-const private_key = process.env.PRIVATE_KEY
 
 let connect
 if(typeof window !=='undefined'){
@@ -15,9 +14,10 @@ if(typeof window !=='undefined'){
 
 export const CredenSureProvider = ({ children }) => {
     const [wallet, setWallet] = useState(null);
-    const [zkProvider, setZkProvider] = useState(null);
+    const [zksyncSepoliaProvider, setzksyncSepoliaProvider] = useState(null);
     const [contract, setContract] = useState(null);
     const [sessionKey, setSessionKey] = useState(null);
+    const [account, setAccount] = useState(null)
 
      // paymaster params
      const paymasterParams = utils.getPaymasterParams(PAYMASTER_ADDRESS, {
@@ -28,18 +28,20 @@ export const CredenSureProvider = ({ children }) => {
     useEffect(() => {
         const init = async () => {
             if(!connect) return
+
             const provider = new BrowserProvider(connect)
-            const zkProvider = new Provider('https://sepolia.era.zksync.dev');
+            await provider.send('eth_requestAccounts', []);
+            const zksyncSepoliaProvider = new Provider("https://sepolia.era.zksync.dev");
 
             const signer = await provider.getSigner()
-            const contract = new Contract(ADDRESS, ABI, signer);
+            const contract = new ethers.Contract(ADDRESS, ABI, signer);
 
-            setZkProvider(zkProvider);
+            setzksyncSepoliaProvider(zksyncSepoliaProvider);
             setContract(contract);
         };
 
         init();
-    }, []);
+    });
 
     const createSessionKey = async () => {
         const sessionKeyWallet = ethers.Wallet.createRandom();
@@ -72,7 +74,7 @@ export const CredenSureProvider = ({ children }) => {
 
 
     const issueCredential = async (recipient, data) => {
-        if (contract) {
+        if (contract && zksyncSepoliaProvider) {
             // calculate gas limits
             const gasLimit = await contract.issueCredential
                 .estimateGas(recipient,data,{
@@ -81,13 +83,16 @@ export const CredenSureProvider = ({ children }) => {
                 paymasterParams: paymasterParams,
                 },
            });
-                         
+
+           if(!gasLimit) return
+           const gasPrice = await zksyncSepoliaProvider.getGasPrice()
+
             // execute transaction
-            const tx = await contract
+            const tx =  await contract
                 .issueCredential(recipient,data,{
-                maxPriorityFeePerGas: ethers.toBigInt(0),
-                maxFeePerGas: await zkProvider.getGasPrice(),
-                gasLimit,
+                maxPriorityFeePerGas: 0n,
+                maxFeePerGas: gasPrice,
+                gasLimit : gasLimit,
                 customData: {
                 gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
                 paymasterParams,
@@ -113,7 +118,7 @@ export const CredenSureProvider = ({ children }) => {
             const tx = await contract
             .endorse(recipient,message,{
             maxPriorityFeePerGas: ethers.toBigInt(0),
-            maxFeePerGas: await zkProvider.getGasPrice(),
+            maxFeePerGas: await zksyncSepoliaProvider.getGasPrice(),
             gasLimit,
             customData: {
             gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
@@ -122,10 +127,7 @@ export const CredenSureProvider = ({ children }) => {
         });
 
         await tx.wait()
-            // await signMetaTxRequest(sessionKey, tx);
-            // const sentTx = await zkProvider.sendTransaction(metaTx);
-            // await sentTx.wait();
-            // return sentTx.hash;
+         
     };
 
     const fetchCredentials = async (user) => {
